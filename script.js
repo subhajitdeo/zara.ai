@@ -1,5 +1,5 @@
-// ==================== FINAL SCRIPT - GOOGLE UK FEMALE VOICE (DEFAULT) ====================
-// Voice priority: Google UK English Female → UK Female → any natural female → best available
+// ==================== FINAL SCRIPT - NO EMOJIS, GOOGLE UK FEMALE VOICE ====================
+// Removes emojis from AI responses + forces Google UK English Female voice
 
 // ---------- DOM Elements ----------
 const chatMessages = document.getElementById('chatMessages');
@@ -50,7 +50,7 @@ if (modelSelect) {
     if (savedModel) modelSelect.value = savedModel;
     modelSelect.addEventListener('change', () => {
         localStorage.setItem('zara_selected_model', modelSelect.value);
-        addSystemMessage(`🧠 Model switched to ${modelSelect.options[modelSelect.selectedIndex].text}`, false);
+        addSystemMessage(`Model switched to ${modelSelect.options[modelSelect.selectedIndex].text}`, false);
     });
 }
 
@@ -64,6 +64,11 @@ const siteMap = {
     bing: 'https://bing.com', cnn: 'https://cnn.com', bbc: 'https://bbc.com', reuters: 'https://reuters.com',
     wikipedia: 'https://wikipedia.org'
 };
+
+// ---------- Helper: Strip emojis from text ----------
+function stripEmojis(text) {
+    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{1F004}\u{1F0CF}\u{1F18E}\u{1F191}-\u{1F19A}\u{1F201}-\u{1F202}\u{1F21A}\u{1F22F}\u{1F232}-\u{1F23A}\u{1F250}-\u{1F251}\u{FE0F}]/gu, '');
+}
 
 // ---------- Secure URL validation ----------
 function isSafeUrl(url) {
@@ -83,8 +88,13 @@ function safeMathEvaluate(expr) {
     } catch { return null; }
 }
 
-// ---------- UI Helpers (with DOMPurify) ----------
+// ---------- UI Helpers (with DOMPurify & emoji stripping) ----------
 function renderMessage(text, isUser, toolData = null, isError = false) {
+    // Strip emojis from AI messages only (keep user's original for display)
+    let cleanText = text;
+    if (!isUser && !isError) {
+        cleanText = stripEmojis(text);
+    }
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
     if (isError) messageDiv.style.opacity = '0.7';
@@ -102,11 +112,11 @@ function renderMessage(text, isUser, toolData = null, isError = false) {
     chatMessages.appendChild(messageDiv);
     const contentDiv = messageDiv.querySelector('.message-text');
     if (isUser || isError) {
-        const cleanHtml = DOMPurify.sanitize(marked.parse(text));
+        const cleanHtml = DOMPurify.sanitize(marked.parse(cleanText));
         contentDiv.innerHTML = cleanHtml;
         messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
-        typeText(contentDiv, text, () => {
+        typeText(contentDiv, cleanText, () => {
             messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
     }
@@ -145,24 +155,22 @@ function addMessage(text, isUser, toolData = null) {
     saveMemory();
 }
 
-// ---------- IMPROVED SPEECH WITH GOOGLE UK FEMALE DEFAULT ----------
+// ---------- Speech with Google UK Female priority & emoji stripping ----------
 function speakText(text) {
     if (!synth) return;
+    // Strip emojis and extra spaces before speaking
+    let cleanText = stripEmojis(text).replace(/\s+/g, ' ').trim();
+    if (!cleanText) return;
+    
     synth.cancel();
     isSpeaking = true;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;      // Slightly slower, more polished
-    utterance.pitch = 1.0;     // Natural pitch
-
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    
     const voices = availableVoices.length ? availableVoices : synth.getVoices();
     
-    // Priority order:
-    // 1. Exact "Google UK English Female"
-    // 2. Any UK female voice (contains "UK" and "Female")
-    // 3. "Microsoft Hazel" (natural British female)
-    // 4. "Samantha" (premium US female)
-    // 5. Any en-US female voice
-    // 6. Fallback to first available British or en-US voice
+    // Priority: exact "Google UK English Female"
     let selectedVoice = voices.find(v => v.name === "Google UK English Female");
     if (!selectedVoice) {
         selectedVoice = voices.find(v => v.name.includes("UK") && v.name.includes("Female"));
@@ -219,7 +227,7 @@ async function fetchDetailedWeather(location) {
         let clothingTip = temp > 30 ? "Wear light clothes." : (temp < 10 ? "Heavy jacket needed." : "Comfortable.");
         let umbrellaTip = rainProb > 50 ? "Bring an umbrella!" : (rainProb > 20 ? "Maybe an umbrella." : "");
         let travelWarning = wind > 30 ? "Strong winds – be careful." : "";
-        return { summary: `📍 ${name}: ${temp}°C, feels like ${feelsLike}°C. Humidity ${humidity}%, wind ${wind} km/h, ${condition}. Rain chance ${rainProb}%. ${clothingTip} ${umbrellaTip} ${travelWarning}` };
+        return { summary: `${name}: ${temp}C, feels like ${feelsLike}C. Humidity ${humidity}%, wind ${wind} km/h, ${condition}. Rain chance ${rainProb}%. ${clothingTip} ${umbrellaTip} ${travelWarning}` };
     } catch(e) { return null; }
 }
 
@@ -233,10 +241,10 @@ async function executeToolCommand(toolObj) {
         setTimeout(() => {
             const win = window.open('', '_blank');
             if (win) win.location.href = urlToOpen;
-            else addSystemMessage("⚠️ Popup blocked. Please allow popups.", true);
+            else addSystemMessage("Popup blocked. Please allow popups.", true);
         }, 800);
     } else if (urlToOpen) {
-        addSystemMessage("❌ Unsafe URL blocked.", true);
+        addSystemMessage("Unsafe URL blocked.", true);
     }
     if (tool === 'weather' && query) {
         let loc = query.replace(/weather|in|for|current/gi, '').trim() || "London";
@@ -253,7 +261,7 @@ async function executeToolCommand(toolObj) {
     }
 }
 
-// ---------- Declarative Command System ----------
+// ---------- Declarative Command System (emoji-free) ----------
 const commands = [
     { pattern: /\btime\b/i, action: () => { const now = new Date(); const timeStr = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }); addMessage(`The current time is ${timeStr}.`, false); speakText(`The current time is ${timeStr}.`); return true; } },
     { pattern: /\bdate\b/i, action: () => { const now = new Date(); const dateStr = now.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' }); addMessage(`Today is ${dateStr}.`, false); speakText(`Today is ${dateStr}.`); return true; } },
@@ -295,13 +303,13 @@ function extractJSONObject(str) {
     return null;
 }
 
-// ---------- AI Call with GK detection and JSON optional ----------
+// ---------- AI Call with GK detection, no-emoji system prompt ----------
 async function askZara(userPrompt) {
     if (handleLocalCommand(userPrompt)) return;
 
     openRouterApiKey = localStorage.getItem('zara_openrouter_key') || '';
     if (!openRouterApiKey.trim()) {
-        addSystemMessage("❌ No API key found. Please enter your OpenRouter API key.", true);
+        addSystemMessage("No API key found. Please enter your OpenRouter API key.", true);
         speakText("Please set your API key first.");
         return;
     }
@@ -317,9 +325,11 @@ async function askZara(userPrompt) {
         let history = JSON.parse(localStorage.getItem('zara_chat_history') || '[]');
         let recent = history.slice(-30);
         
+        // Updated system prompt: NO EMOJIS
         const systemPrompt = `You are Zara, a futuristic AI assistant. The user's name is ${zaraMemory.name}. Their interests include ${zaraMemory.interests.join(', ')}. Be conversational, warm, and helpful.
 
-RULES:
+Important:
+- Do not use emojis, emoticons, or special symbols. Use plain text only.
 - If you need to use a tool (weather, news, open website, YouTube, Wikipedia, Google), respond in JSON format: {"tool":"tool_name","speak":"your spoken response","open":"optional url","query":"optional query"}
 - For normal questions (explanations, general knowledge, conversation), respond in plain text under the "speak" field WITHOUT using a tool: {"tool":"none","speak":"your natural answer"}
 - Keep answers concise but informative.
@@ -354,6 +364,7 @@ RULES:
         let aiRaw = data.choices[0].message.content;
         console.log("RAW AI RESPONSE:", aiRaw);
 
+        // Safer JSON parsing
         let aiJson = null;
         try {
             aiJson = JSON.parse(aiRaw);
@@ -369,6 +380,8 @@ RULES:
         const isGK = /what|who|why|how|explain|define/i.test(userPrompt);
         if (isGK && (!aiJson || aiJson.tool === "none")) {
             let replyText = (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I'm not sure how to answer that.";
+            // Strip emojis from raw AI before showing/speaking
+            replyText = stripEmojis(replyText);
             addMessage(replyText, false);
             speakText(replyText);
             return;
@@ -378,6 +391,8 @@ RULES:
             aiJson = { tool: "none", speak: (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I couldn't generate a proper response." };
         }
         if (!aiJson.speak || typeof aiJson.speak !== "string") aiJson.speak = "I couldn't understand the response properly.";
+        // Strip emojis from speak field
+        aiJson.speak = stripEmojis(aiJson.speak);
 
         const validTools = ['weather', 'news', 'youtube', 'wikipedia', 'google', 'open_site', 'none'];
         if (!validTools.includes(aiJson.tool)) aiJson.tool = 'none';
@@ -403,11 +418,11 @@ RULES:
         }
     } catch (error) {
         if (error.name === 'AbortError') {
-            addSystemMessage("⏱️ Request timed out. Please try again.", true);
+            addSystemMessage("Request timed out. Please try again.", true);
             speakText("Request timed out.");
         } else {
             console.error(error);
-            addSystemMessage(`❌ Error: ${error.message}.`, true);
+            addSystemMessage(`Error: ${error.message}.`, true);
             speakText("I encountered an error. Please try again.");
         }
     } finally {
@@ -417,10 +432,10 @@ RULES:
     }
 }
 
-// ---------- Voice Recognition ----------
+// ---------- Voice Recognition (unchanged) ----------
 function initSpeechRecognition() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        addSystemMessage("❌ Voice recognition not supported.", true);
+        addSystemMessage("Voice recognition not supported.", true);
         micBtn.disabled = true;
         return null;
     }
@@ -434,7 +449,7 @@ function initSpeechRecognition() {
         isListening = true;
         micBtn.classList.add('listening');
         soundWave.classList.add('active');
-        voiceStatusSpan.innerText = "🎤 Listening...";
+        voiceStatusSpan.innerText = "Listening...";
         aiOrb.style.boxShadow = "0 0 30px #ff3399";
         restartCounter = 0;
     };
@@ -458,12 +473,12 @@ function initSpeechRecognition() {
     recog.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         userInput.value = transcript;
-        voiceStatusSpan.innerText = `🗣️ "${transcript}"`;
+        voiceStatusSpan.innerText = `Recognized: "${transcript}"`;
         setTimeout(() => voiceStatusSpan.innerText = "", 2000);
         processUserInput(transcript);
     };
     recog.onerror = (e) => {
-        voiceStatusSpan.innerText = `🎙️ ${e.error}`;
+        voiceStatusSpan.innerText = `Error: ${e.error}`;
         setTimeout(() => voiceStatusSpan.innerText = "", 1500);
         micBtn.classList.remove('listening');
         soundWave.classList.remove('active');
@@ -494,11 +509,11 @@ micBtn.addEventListener('click', startListening);
 continuousModeToggle.addEventListener('change', (e) => { continuousMode = e.target.checked; if (!continuousMode && isListening) recognition?.stop(); addSystemMessage(`Continuous mode ${continuousMode ? 'enabled' : 'disabled'}.`, false); });
 saveApiKeyBtn.addEventListener('click', () => {
     let newKey = apiKeyInput.value.trim();
-    if (!newKey) { addSystemMessage("❌ Empty key.", true); return; }
-    if (!newKey.startsWith("sk-or-")) { addSystemMessage("❌ Invalid key format (must start with sk-or-).", true); return; }
+    if (!newKey) { addSystemMessage("Empty key.", true); return; }
+    if (!newKey.startsWith("sk-or-")) { addSystemMessage("Invalid key format (must start with sk-or-).", true); return; }
     localStorage.setItem('zara_openrouter_key', newKey);
     openRouterApiKey = newKey;
-    addSystemMessage("✅ API key saved.", false);
+    addSystemMessage("API key saved.", false);
     speakText("Key saved.");
 });
 
@@ -508,7 +523,7 @@ function loadChatHistory() {
     const lastMessages = history.slice(-12);
     chatMessages.innerHTML = '';
     lastMessages.forEach(msg => renderMessage(msg.content, msg.role === 'user'));
-    addSystemMessage("🔄 Loaded previous conversation.", false);
+    addSystemMessage("Loaded previous conversation.", false);
 }
 loadChatHistory();
 
