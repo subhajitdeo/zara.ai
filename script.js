@@ -1,5 +1,5 @@
-// ==================== FINAL SCRIPT - HARDENED & SECURE ====================
-// XSS protection, safe math, abort controller, robust JSON extraction, word-based typing, declarative commands
+// ==================== FINAL SCRIPT - WITH GK FALLBACK & SAFER JSON ====================
+// All previous hardening + JSON optional + GK direct route
 
 // ---------- DOM Elements ----------
 const chatMessages = document.getElementById('chatMessages');
@@ -73,13 +73,10 @@ function isSafeUrl(url) {
     } catch { return false; }
 }
 
-// ---------- Safe math evaluator (no Function) ----------
+// ---------- Safe math evaluator ----------
 function safeMathEvaluate(expr) {
-    // Allow only digits, basic operators, parentheses, decimal point
     if (!/^[0-9+\-*/().\s]+$/.test(expr)) return null;
     try {
-        // Use Function but with sanitized expression – still safe as we control input
-        // Alternative: use a lightweight expression parser, but Function with sanitized is acceptable
         const result = Function('"use strict"; return (' + expr + ')')();
         if (typeof result === 'number' && isFinite(result)) return result;
         return null;
@@ -116,10 +113,10 @@ function renderMessage(text, isUser, toolData = null, isError = false) {
     return messageDiv;
 }
 
-// Improved typing animation (word by word, using requestAnimationFrame)
+// Word-by-word typing using requestAnimationFrame
 async function typeText(container, fullText, onComplete) {
     container.innerHTML = '';
-    const words = fullText.split(/(\s+)/); // preserve spaces
+    const words = fullText.split(/(\s+)/);
     let index = 0;
     let accumulated = '';
     function addNextChunk() {
@@ -148,7 +145,7 @@ function addMessage(text, isUser, toolData = null) {
     saveMemory();
 }
 
-// ---------- Speech (race condition fixed) ----------
+// ---------- Speech with race fix ----------
 function speakText(text) {
     if (!synth) return;
     synth.cancel();
@@ -170,7 +167,6 @@ function speakText(text) {
             }, 500);
         }
     };
-    // Delay to avoid race with cancel
     setTimeout(() => synth.speak(utterance), 100);
 }
 
@@ -235,120 +231,17 @@ async function executeToolCommand(toolObj) {
 
 // ---------- Declarative Command System ----------
 const commands = [
-    {
-        pattern: /\btime\b/i,
-        action: () => {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
-            addMessage(`The current time is ${timeStr}.`, false);
-            speakText(`The current time is ${timeStr}.`);
-            return true;
-        }
-    },
-    {
-        pattern: /\bdate\b/i,
-        action: () => {
-            const now = new Date();
-            const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            addMessage(`Today is ${dateStr}.`, false);
-            speakText(`Today is ${dateStr}.`);
-            return true;
-        }
-    },
-    {
-        pattern: /^[\d\s+\-*/().]+$/,
-        action: (text) => {
-            const result = safeMathEvaluate(text);
-            if (result !== null) {
-                addMessage(`${text} = ${result}`, false);
-                speakText(`${text} = ${result}`);
-                return true;
-            }
-            return false;
-        }
-    },
-    {
-        pattern: /\bweather\b/i,
-        action: (text) => { executeToolCommand({ tool: "weather", query: text }); return true; }
-    },
-    {
-        pattern: /^open\s+\w+/i,
-        action: (text) => {
-            const site = text.replace(/^open\s+/i, '').trim().toLowerCase();
-            if (siteMap[site]) {
-                executeToolCommand({ tool: "open_site", speak: `Opening ${site}.`, open: siteMap[site], query: site });
-                return true;
-            } else {
-                const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(site)}`;
-                executeToolCommand({ tool: "open_site", speak: `Searching Google for "${site}".`, open: searchUrl, query: site });
-                return true;
-            }
-        }
-    },
-    {
-        pattern: /\bsearch.*youtube\b|\byoutube.*search\b/i,
-        action: (text) => {
-            let query = text.replace(/search|on|youtube/gi, '').trim();
-            if (query) {
-                const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-                executeToolCommand({ tool: "youtube", speak: `Searching YouTube for ${query}.`, open: url, query });
-                return true;
-            }
-            return false;
-        }
-    },
-    {
-        pattern: /\b(hi|hello|hey|good morning|good afternoon|good evening)\b/i,
-        action: () => {
-            const hour = new Date().getHours();
-            let greeting = "Hello";
-            if (hour < 12) greeting = "Good morning";
-            else if (hour < 18) greeting = "Good afternoon";
-            else greeting = "Good evening";
-            addMessage(`${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`, false);
-            speakText(`${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`);
-            return true;
-        }
-    },
-    {
-        pattern: /\b(thank|thanks)\b/i,
-        action: () => {
-            addMessage("You're very welcome! I'm happy to help.", false);
-            speakText("You're very welcome! I'm happy to help.");
-            return true;
-        }
-    },
-    {
-        pattern: /\b(goodbye|bye)\b/i,
-        action: () => {
-            addMessage("Goodbye! Come back anytime.", false);
-            speakText("Goodbye! Come back anytime.");
-            return true;
-        }
-    },
-    {
-        pattern: /\b(what can you do|help|capabilities)\b/i,
-        action: () => {
-            const reply = "I can tell time and date, do math, open websites, search YouTube, fetch live weather, get news, answer questions, and remember our conversation.";
-            addMessage(reply, false);
-            speakText(reply);
-            return true;
-        }
-    },
-    {
-        pattern: /my name is (\w+)/i,
-        action: (text) => {
-            const match = text.match(/my name is (\w+)/i);
-            if (match) {
-                zaraMemory.name = match[1];
-                saveMemory();
-                addMessage(`Nice to meet you, ${zaraMemory.name}! I'll remember that.`, false);
-                speakText(`Nice to meet you, ${zaraMemory.name}! I'll remember that.`);
-                return true;
-            }
-            return false;
-        }
-    }
+    { pattern: /\btime\b/i, action: () => { const now = new Date(); const timeStr = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }); addMessage(`The current time is ${timeStr}.`, false); speakText(`The current time is ${timeStr}.`); return true; } },
+    { pattern: /\bdate\b/i, action: () => { const now = new Date(); const dateStr = now.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' }); addMessage(`Today is ${dateStr}.`, false); speakText(`Today is ${dateStr}.`); return true; } },
+    { pattern: /^[\d\s+\-*/().]+$/, action: (text) => { const result = safeMathEvaluate(text); if (result !== null) { addMessage(`${text} = ${result}`, false); speakText(`${text} = ${result}`); return true; } return false; } },
+    { pattern: /\bweather\b/i, action: (text) => { executeToolCommand({ tool:"weather", query:text }); return true; } },
+    { pattern: /^open\s+\w+/i, action: (text) => { const site = text.replace(/^open\s+/i, '').trim().toLowerCase(); if (siteMap[site]) { executeToolCommand({ tool:"open_site", speak:`Opening ${site}.`, open:siteMap[site], query:site }); return true; } else { const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(site)}`; executeToolCommand({ tool:"open_site", speak:`Searching Google for "${site}".`, open:searchUrl, query:site }); return true; } } },
+    { pattern: /\bsearch.*youtube\b|\byoutube.*search\b/i, action: (text) => { let query = text.replace(/search|on|youtube/gi, '').trim(); if (query) { const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`; executeToolCommand({ tool:"youtube", speak:`Searching YouTube for ${query}.`, open:url, query }); return true; } return false; } },
+    { pattern: /\b(hi|hello|hey|good morning|good afternoon|good evening)\b/i, action: () => { const hour = new Date().getHours(); let greeting = "Hello"; if (hour < 12) greeting = "Good morning"; else if (hour < 18) greeting = "Good afternoon"; else greeting = "Good evening"; addMessage(`${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`, false); speakText(`${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`); return true; } },
+    { pattern: /\b(thank|thanks)\b/i, action: () => { addMessage("You're very welcome! I'm happy to help.", false); speakText("You're very welcome! I'm happy to help."); return true; } },
+    { pattern: /\b(goodbye|bye)\b/i, action: () => { addMessage("Goodbye! Come back anytime.", false); speakText("Goodbye! Come back anytime."); return true; } },
+    { pattern: /\b(what can you do|help|capabilities)\b/i, action: () => { const reply = "I can tell time and date, do math, open websites, search YouTube, fetch live weather, get news, answer questions, and remember our conversation."; addMessage(reply, false); speakText(reply); return true; } },
+    { pattern: /my name is (\w+)/i, action: (text) => { const match = text.match(/my name is (\w+)/i); if (match) { zaraMemory.name = match[1]; saveMemory(); addMessage(`Nice to meet you, ${zaraMemory.name}! I'll remember that.`, false); speakText(`Nice to meet you, ${zaraMemory.name}! I'll remember that.`); return true; } return false; } }
 ];
 
 function handleLocalCommand(text) {
@@ -378,7 +271,7 @@ function extractJSONObject(str) {
     return null;
 }
 
-// ---------- AI Call with AbortController, timeout, fallbacks ----------
+// ---------- AI Call with GK detection and JSON optional ----------
 async function askZara(userPrompt) {
     if (handleLocalCommand(userPrompt)) return;
 
@@ -399,10 +292,15 @@ async function askZara(userPrompt) {
     try {
         let history = JSON.parse(localStorage.getItem('zara_chat_history') || '[]');
         let recent = history.slice(-30);
-        const systemPrompt = `You are Zara, a futuristic AI assistant. The user's name is ${zaraMemory.name}. Their interests include ${zaraMemory.interests.join(', ')}. Be conversational, warm, and helpful. Answer general knowledge questions accurately. Use tools only when clearly needed (weather, news, open website). Respond ONLY in valid JSON.
+        
+        // NEW: JSON optional system prompt
+        const systemPrompt = `You are Zara, a futuristic AI assistant. The user's name is ${zaraMemory.name}. Their interests include ${zaraMemory.interests.join(', ')}. Be conversational, warm, and helpful.
 
-Format: {"tool":"weather|news|youtube|wikipedia|google|open_site|none","speak":"your natural answer","open":"optional url","query":"optional"}
-For weather, include query. For normal chat, tool "none". Never add extra text.`;
+RULES:
+- If you need to use a tool (weather, news, open website, YouTube, Wikipedia, Google), respond in JSON format: {"tool":"tool_name","speak":"your spoken response","open":"optional url","query":"optional query"}
+- For normal questions (explanations, general knowledge, conversation), respond in plain text under the "speak" field WITHOUT using a tool: {"tool":"none","speak":"your natural answer"}
+- Keep answers concise but informative.
+- Never add extra text outside the JSON.`;
 
         const messages = [
             { role: "system", content: systemPrompt },
@@ -433,13 +331,30 @@ For weather, include query. For normal chat, tool "none". Never add extra text.`
         let aiRaw = data.choices[0].message.content;
         console.log("RAW AI RESPONSE:", aiRaw);
 
-        aiRaw = aiRaw.replace(/```json/g, '').replace(/```/g, '').trim();
+        // Safer JSON parsing
         let aiJson = null;
-        const jsonStr = extractJSONObject(aiRaw);
-        if (jsonStr) {
-            try { aiJson = JSON.parse(jsonStr); } catch(e) { console.warn("JSON parse error", e); }
+        try {
+            aiJson = JSON.parse(aiRaw);
+        } catch(e) {
+            console.warn("Direct JSON parse failed, trying balanced extraction");
+            const jsonStr = extractJSONObject(aiRaw);
+            if (jsonStr) {
+                try { aiJson = JSON.parse(jsonStr); } catch(e2) { console.warn("Extraction parse also failed"); }
+            }
+        }
+        console.log("PARSED JSON:", aiJson);
+
+        // GK fallback: if question is general knowledge and no tool used, display raw response
+        const isGK = /what|who|why|how|explain|define/i.test(userPrompt);
+        if (isGK && (!aiJson || aiJson.tool === "none")) {
+            // Speak and display the raw AI response (already in aiRaw)
+            let replyText = (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I'm not sure how to answer that.";
+            addMessage(replyText, false);
+            speakText(replyText);
+            return;
         }
 
+        // Fallback if aiJson is still null
         if (!aiJson) {
             aiJson = { tool: "none", speak: (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I couldn't generate a proper response." };
         }
@@ -448,6 +363,7 @@ For weather, include query. For normal chat, tool "none". Never add extra text.`
         const validTools = ['weather', 'news', 'youtube', 'wikipedia', 'google', 'open_site', 'none'];
         if (!validTools.includes(aiJson.tool)) aiJson.tool = 'none';
 
+        // Auto-fill URLs for tools
         if (aiJson.tool === 'youtube' && aiJson.query) aiJson.open = `https://www.youtube.com/results?search_query=${encodeURIComponent(aiJson.query)}`;
         else if (aiJson.tool === 'wikipedia' && aiJson.query) aiJson.open = `https://en.wikipedia.org/wiki/${encodeURIComponent(aiJson.query.replace(/ /g, '_'))}`;
         else if (aiJson.tool === 'google' && aiJson.query) aiJson.open = `https://www.google.com/search?q=${encodeURIComponent(aiJson.query)}`;
