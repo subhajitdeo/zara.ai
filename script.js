@@ -1,5 +1,5 @@
-// ==================== FINAL SCRIPT - WITH GK FALLBACK & SAFER JSON ====================
-// All previous hardening + JSON optional + GK direct route
+// ==================== FINAL SCRIPT - GOOGLE UK FEMALE VOICE (DEFAULT) ====================
+// Voice priority: Google UK English Female → UK Female → any natural female → best available
 
 // ---------- DOM Elements ----------
 const chatMessages = document.getElementById('chatMessages');
@@ -145,18 +145,42 @@ function addMessage(text, isUser, toolData = null) {
     saveMemory();
 }
 
-// ---------- Speech with race fix ----------
+// ---------- IMPROVED SPEECH WITH GOOGLE UK FEMALE DEFAULT ----------
 function speakText(text) {
     if (!synth) return;
     synth.cancel();
     isSpeaking = true;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 1.1;
+    utterance.rate = 0.9;      // Slightly slower, more polished
+    utterance.pitch = 1.0;     // Natural pitch
+
     const voices = availableVoices.length ? availableVoices : synth.getVoices();
-    utterance.voice = voices.find(v => v.name.includes("Google")) ||
-                      voices.find(v => v.name.includes("Microsoft")) ||
-                      voices.find(v => v.lang === "en-US") || voices[0];
+    
+    // Priority order:
+    // 1. Exact "Google UK English Female"
+    // 2. Any UK female voice (contains "UK" and "Female")
+    // 3. "Microsoft Hazel" (natural British female)
+    // 4. "Samantha" (premium US female)
+    // 5. Any en-US female voice
+    // 6. Fallback to first available British or en-US voice
+    let selectedVoice = voices.find(v => v.name === "Google UK English Female");
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.name.includes("UK") && v.name.includes("Female"));
+    }
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.name === "Microsoft Hazel");
+    }
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.name === "Samantha");
+    }
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang === "en-US" && v.name.includes("Female"));
+    }
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang.startsWith("en"));
+    }
+    utterance.voice = selectedVoice || voices[0];
+    
     utterance.onend = () => {
         isSpeaking = false;
         if (continuousMode && !isListening && !pendingRestart && !userInput.value.trim()) {
@@ -293,7 +317,6 @@ async function askZara(userPrompt) {
         let history = JSON.parse(localStorage.getItem('zara_chat_history') || '[]');
         let recent = history.slice(-30);
         
-        // NEW: JSON optional system prompt
         const systemPrompt = `You are Zara, a futuristic AI assistant. The user's name is ${zaraMemory.name}. Their interests include ${zaraMemory.interests.join(', ')}. Be conversational, warm, and helpful.
 
 RULES:
@@ -331,7 +354,6 @@ RULES:
         let aiRaw = data.choices[0].message.content;
         console.log("RAW AI RESPONSE:", aiRaw);
 
-        // Safer JSON parsing
         let aiJson = null;
         try {
             aiJson = JSON.parse(aiRaw);
@@ -344,17 +366,14 @@ RULES:
         }
         console.log("PARSED JSON:", aiJson);
 
-        // GK fallback: if question is general knowledge and no tool used, display raw response
         const isGK = /what|who|why|how|explain|define/i.test(userPrompt);
         if (isGK && (!aiJson || aiJson.tool === "none")) {
-            // Speak and display the raw AI response (already in aiRaw)
             let replyText = (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I'm not sure how to answer that.";
             addMessage(replyText, false);
             speakText(replyText);
             return;
         }
 
-        // Fallback if aiJson is still null
         if (!aiJson) {
             aiJson = { tool: "none", speak: (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I couldn't generate a proper response." };
         }
@@ -363,7 +382,6 @@ RULES:
         const validTools = ['weather', 'news', 'youtube', 'wikipedia', 'google', 'open_site', 'none'];
         if (!validTools.includes(aiJson.tool)) aiJson.tool = 'none';
 
-        // Auto-fill URLs for tools
         if (aiJson.tool === 'youtube' && aiJson.query) aiJson.open = `https://www.youtube.com/results?search_query=${encodeURIComponent(aiJson.query)}`;
         else if (aiJson.tool === 'wikipedia' && aiJson.query) aiJson.open = `https://en.wikipedia.org/wiki/${encodeURIComponent(aiJson.query.replace(/ /g, '_'))}`;
         else if (aiJson.tool === 'google' && aiJson.query) aiJson.open = `https://www.google.com/search?q=${encodeURIComponent(aiJson.query)}`;
@@ -399,7 +417,7 @@ RULES:
     }
 }
 
-// ---------- Voice Recognition with restart limit ----------
+// ---------- Voice Recognition ----------
 function initSpeechRecognition() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         addSystemMessage("❌ Voice recognition not supported.", true);
