@@ -1,5 +1,5 @@
-// ==================== script.js - STABLE CORE ====================
-// Command routing, memory system, local weather, math parser, speech queue
+// ==================== script.js - FINAL HARDENED VERSION ====================
+// Includes: choices validation, hard fallback, debug log, speak validation, memory, command router
 
 // ---------- DOM Elements ----------
 const chatMessages = document.getElementById('chatMessages');
@@ -26,7 +26,7 @@ let pendingRestart = false;
 
 // ---------- Memory System (persistent) ----------
 let zaraMemory = JSON.parse(localStorage.getItem('zara_memory')) || {
-    name: "Subha",               // default user name (customize)
+    name: "Subha",
     interests: ["technology", "AI"],
     preferences: { continuousMode: true },
     lastSeen: Date.now(),
@@ -66,7 +66,6 @@ function renderMessage(text, isUser, toolData = null, isError = false) {
     if (toolData?.sourceLinks?.length) {
         sourceHtml = `<div class="source-links">${toolData.sourceLinks.map(link => `<a href="${link.url}" target="_blank" class="source-link"><i class="fas fa-external-link-alt"></i> ${link.label}</a>`).join('')}</div>`;
     }
-    // Render markdown for AI messages
     let contentHtml = text;
     if (!isUser && typeof marked !== 'undefined') {
         contentHtml = marked.parse(text);
@@ -87,7 +86,6 @@ function addMessage(text, isUser, toolData = null) {
     history.push({ role: isUser ? 'user' : 'assistant', content: text, timestamp: Date.now() });
     if (history.length > 100) history = history.slice(-100);
     localStorage.setItem('zara_chat_history', JSON.stringify(history));
-    // Update memory conversation count
     zaraMemory.conversationCount++;
     saveMemory();
 }
@@ -95,7 +93,7 @@ function addMessage(text, isUser, toolData = null) {
 // ---------- Speech with queue protection ----------
 function speakText(text) {
     if (!synth) return;
-    if (synth.speaking) synth.cancel();  // prevent overlapping
+    if (synth.speaking) synth.cancel();
     isSpeaking = true;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
@@ -164,47 +162,39 @@ async function executeToolCommand(toolObj) {
     if (tool === 'news') setTimeout(() => window.open('https://www.reuters.com/', '_blank'), 1000);
 }
 
-// ==================== COMMAND HANDLERS (priority routing) ====================
+// ==================== COMMAND HANDLERS ====================
 const commandHandlers = [];
 
-// 1. Time (regex word boundary)
 function handleTime(text) {
     if (/\btime\b/.test(text)) {
         const now = new Date();
         const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', second:'2-digit' });
-        const reply = `The current time is ${timeStr}.`;
-        addMessage(reply, false); speakText(reply);
+        addMessage(`The current time is ${timeStr}.`, false); speakText(`The current time is ${timeStr}.`);
         return true;
     }
     return false;
 }
 commandHandlers.push(handleTime);
 
-// 2. Date
 function handleDate(text) {
     if (/\bdate\b/.test(text)) {
         const now = new Date();
         const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        const reply = `Today is ${dateStr}.`;
-        addMessage(reply, false); speakText(reply);
+        addMessage(`Today is ${dateStr}.`, false); speakText(`Today is ${dateStr}.`);
         return true;
     }
     return false;
 }
 commandHandlers.push(handleDate);
 
-// 3. Math (safe evaluation)
 function handleMath(text) {
-    // Detect if it's likely a math expression: contains digits and operators, not too long
     if (!/[0-9+\-*/().]/.test(text)) return false;
-    // Remove dangerous characters
     let sanitized = text.replace(/[^0-9+\-*/().]/g, '');
     if (!sanitized) return false;
     try {
         const result = Function(`return ${sanitized}`)();
         if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
-            const reply = `${sanitized} = ${result}`;
-            addMessage(reply, false); speakText(reply);
+            addMessage(`${sanitized} = ${result}`, false); speakText(`${sanitized} = ${result}`);
             return true;
         }
     } catch(e) {}
@@ -212,7 +202,6 @@ function handleMath(text) {
 }
 commandHandlers.push(handleMath);
 
-// 4. Weather (local detection)
 function handleWeather(text) {
     if (/\bweather\b/.test(text)) {
         executeToolCommand({ tool: "weather", query: text });
@@ -222,7 +211,6 @@ function handleWeather(text) {
 }
 commandHandlers.push(handleWeather);
 
-// 5. Open website
 function handleOpenSite(text) {
     if (/^open\s+\w+/.test(text)) {
         const site = text.replace(/^open\s+/, '').trim().toLowerCase();
@@ -239,7 +227,6 @@ function handleOpenSite(text) {
 }
 commandHandlers.push(handleOpenSite);
 
-// 6. YouTube search
 function handleYouTubeSearch(text) {
     if (/\bsearch.*youtube\b/.test(text) || /\byoutube.*search\b/.test(text)) {
         let query = text.replace(/search|on|youtube/gi, '').trim();
@@ -253,7 +240,6 @@ function handleYouTubeSearch(text) {
 }
 commandHandlers.push(handleYouTubeSearch);
 
-// 7. Greetings (word boundaries)
 function handleGreeting(text) {
     if (/\b(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(text)) {
         const hour = new Date().getHours();
@@ -261,34 +247,32 @@ function handleGreeting(text) {
         if (hour < 12) greeting = "Good morning";
         else if (hour < 18) greeting = "Good afternoon";
         else greeting = "Good evening";
-        const reply = `${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`;
-        addMessage(reply, false); speakText(reply);
+        addMessage(`${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`, false);
+        speakText(`${greeting}, ${zaraMemory.name}! I'm Zara. How can I help you today?`);
         return true;
     }
     return false;
 }
 commandHandlers.push(handleGreeting);
 
-// 8. Thanks / Goodbye
 function handleThanks(text) {
     if (/\b(thank|thanks)\b/.test(text)) {
-        const reply = "You're very welcome! I'm happy to help.";
-        addMessage(reply, false); speakText(reply);
+        addMessage("You're very welcome! I'm happy to help.", false);
+        speakText("You're very welcome! I'm happy to help.");
         return true;
     }
     if (/\b(goodbye|bye)\b/.test(text)) {
-        const reply = "Goodbye! Come back anytime.";
-        addMessage(reply, false); speakText(reply);
+        addMessage("Goodbye! Come back anytime.", false);
+        speakText("Goodbye! Come back anytime.");
         return true;
     }
     return false;
 }
 commandHandlers.push(handleThanks);
 
-// 9. Help
 function handleHelp(text) {
     if (/\b(what can you do|help|capabilities)\b/.test(text)) {
-        const reply = "I can tell time and date, do math, open websites, search YouTube, fetch live weather, get news, answer questions, and remember our conversation. Just ask!";
+        const reply = "I can tell time and date, do math, open websites, search YouTube, fetch live weather, get news, answer questions, and remember our conversation.";
         addMessage(reply, false); speakText(reply);
         return true;
     }
@@ -296,21 +280,19 @@ function handleHelp(text) {
 }
 commandHandlers.push(handleHelp);
 
-// 10. Set user name (memory)
 function handleSetName(text) {
     const match = text.match(/my name is (\w+)/i);
     if (match) {
         zaraMemory.name = match[1];
         saveMemory();
-        const reply = `Nice to meet you, ${zaraMemory.name}! I'll remember that.`;
-        addMessage(reply, false); speakText(reply);
+        addMessage(`Nice to meet you, ${zaraMemory.name}! I'll remember that.`, false);
+        speakText(`Nice to meet you, ${zaraMemory.name}! I'll remember that.`);
         return true;
     }
     return false;
 }
 commandHandlers.push(handleSetName);
 
-// ---------- MAIN COMMAND ROUTER ----------
 function handleLocalCommand(text) {
     for (const handler of commandHandlers) {
         if (handler(text)) return true;
@@ -318,9 +300,9 @@ function handleLocalCommand(text) {
     return false;
 }
 
-// ---------- AI CALL (with memory context) ----------
+// ==================== AI CALL WITH ROBUST ERROR HANDLING ====================
 async function askZara(userPrompt) {
-    if (handleLocalCommand(userPrompt)) return;  // instant local handling
+    if (handleLocalCommand(userPrompt)) return;
 
     openRouterApiKey = localStorage.getItem('zara_openrouter_key') || '';
     if (!openRouterApiKey.trim()) {
@@ -346,20 +328,60 @@ For weather, include query. For normal chat, tool "none". Never add extra text.`
             { role: "user", content: userPrompt }
         ];
 
+        // You can change the model here if needed (examples below)
+        // Model options (free on OpenRouter):
+        // - "deepseek/deepseek-chat-v3-0324:free" (current)
+        // - "mistralai/mistral-7b-instruct:free"
+        // - "google/gemma-3-27b-it:free"
+        // - "meta-llama/llama-3.3-70b-instruct:free"
+        const model = "deepseek/deepseek-chat-v3-0324:free";
+
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
-            headers: { "Authorization": `Bearer ${openRouterApiKey.trim()}`, "Content-Type": "application/json", "HTTP-Referer": window.location.origin, "X-Title": "Zara AI Assistant" },
-            body: JSON.stringify({ model: "deepseek/deepseek-chat-v3-0324:free", messages, temperature: 0.7, max_tokens: 700 })
+            headers: {
+                "Authorization": `Bearer ${openRouterApiKey.trim()}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": window.location.origin,
+                "X-Title": "Zara AI Assistant"
+            },
+            body: JSON.stringify({
+                model: model,
+                messages,
+                temperature: 0.7,
+                max_tokens: 700
+            })
         });
 
         if (!response.ok) throw new Error(`API Error ${response.status}`);
         const data = await response.json();
+
+        // CRITICAL: Validate that choices exist
+        if (!data.choices || !data.choices.length) {
+            throw new Error("No AI response received (empty choices)");
+        }
+
         let aiRaw = data.choices[0].message.content;
+        console.log("RAW AI RESPONSE:", aiRaw);
+
         aiRaw = aiRaw.replace(/```json/g, '').replace(/```/g, '').trim();
         let aiJson = null;
         const match = aiRaw.match(/\{[\s\S]*\}/);
-        if (match) try { aiJson = JSON.parse(match[0]); } catch(e) {}
-        if (!aiJson) aiJson = { tool: "none", speak: aiRaw.substring(0, 400), open: null };
+        if (match) {
+            try { aiJson = JSON.parse(match[0]); } catch(e) { console.warn("JSON parse error", e); }
+        }
+
+        // Hard fallback
+        if (!aiJson) {
+            aiJson = {
+                tool: "none",
+                speak: (typeof aiRaw === "string" && aiRaw.trim().length) ? aiRaw.trim() : "I couldn't generate a proper response."
+            };
+        }
+
+        // Validate speak property
+        if (!aiJson.speak || typeof aiJson.speak !== "string") {
+            aiJson.speak = "I couldn't understand the response properly.";
+        }
 
         const validTools = ['weather', 'news', 'youtube', 'wikipedia', 'google', 'open_site', 'none'];
         if (!validTools.includes(aiJson.tool)) aiJson.tool = 'none';
