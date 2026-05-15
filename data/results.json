@@ -1,49 +1,10 @@
 {
-  "last_updated": "2024-01-15T18:30:00.000000",
-  "last_updated_readable": "2024-01-15 18:30:00 IST",
-  "total_stocks_scanned": 30,
-  "successful_stocks": 28,
-  "bullish_count": 6,
-  "failed_count": 2,
-  "scanner_duration_seconds": 45.2,
-  "stocks": [
-    {
-      "rank": 1,
-      "symbol": "RELIANCE",
-      "price": 2850.50,
-      "ema20": 2810.20,
-      "ema50": 2780.30,
-      "ema100": 2720.10,
-      "ema200": 2650.40,
-      "daily_gain_pct": 1.45,
-      "volume": 5230000,
-      "rel_volume": 1.32,
-      "ema_sep_pct": 7.55,
-      "price_dist_pct": 1.43,
-      "momentum_pct": 4.21,
-      "is_bullish_aligned": true,
-      "trend_score": 87.3,
-      "status": "Strong Bullish",
-      "color": "green"
-    },
-    {
-      "rank": 2,
-      "symbol": "TCS",
-      "price": 3850.00,
-      "ema20": 3820.50,
-      "ema50": 3790.20,
-      "ema100": 3750.80,
-      "ema200": 3680.30,
-      "daily_gain_pct": 0.85,
-      "volume": 1800000,
-      "rel_volume": 0.95,
-      "ema_sep_pct": 4.61,
-      "price_dist_pct": 0.77,
-      "momentum_pct": 2.54,
-      "is_bullish_aligned": true,
-      "trend_score": 74.8,
-      "status": "Strong Bullish",
-      "color": "green"
-    }
-  ]
+  "last_updated": "2024-01-01T00:00:00",
+  "last_updated_readable": "2024-01-01 00:00:00 IST",
+  "total_stocks_scanned": 0,
+  "successful_stocks": 0,
+  "bullish_count": 0,
+  "failed_count": 0,
+  "scanner_duration_seconds": 0,
+  "stocks": []
 }
