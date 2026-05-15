@@ -69,7 +69,7 @@ for symbol in stocks["SYMBOL"]:
         })
 
         # Prevent rate limiting
-        time.sleep(0.3)
+        time.sleep(0.7)
 
     except Exception as e:
 
