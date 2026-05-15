@@ -1,6 +1,6 @@
 """
 NSE Nifty 500 Trend Strength Scanner
-Fixed: .NS suffix for yfinance, volume conversion, error logging, commit permissions.
+Uses direct Yahoo Finance API (no yfinance library) - more reliable.
 """
 
 import json
@@ -8,19 +8,18 @@ import time
 import logging
 import sys
 import os
+import requests
 from datetime import datetime
 from typing import Dict, List, Optional
-
 import pandas as pd
-import yfinance as yf
 from tqdm import tqdm
 
 # ==================== CONFIGURATION ====================
 SYMBOLS_FILE = "nifty500.txt"
 OUTPUT_FILE = "data/results.json"
 YEARS_OF_DATA = 3
-REQUEST_DELAY = 0.3  # seconds between stocks
-MAX_RETRIES = 2
+REQUEST_DELAY = 0.5  # seconds between stocks
+MAX_RETRIES = 3
 
 # Scoring weights
 WEIGHTS = {
@@ -38,6 +37,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Headers to mimic a real browser
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+    'Accept-Language': 'en-US,en;q=0.9',
+}
+
 
 def load_symbols(file_path: str) -> List[str]:
     """Load NSE symbols from text file."""
@@ -51,35 +57,80 @@ def load_symbols(file_path: str) -> List[str]:
         return []
 
 
-def fetch_stock_data(symbol: str, period: str = "3y") -> Optional[pd.DataFrame]:
+def fetch_stock_data_direct(symbol: str, period: str = "3y") -> Optional[pd.DataFrame]:
     """
-    Fetch daily OHLCV for NSE stock using yfinance.
-    CRITICAL FIX: Appends .NS suffix for Indian market.
+    Fetch daily OHLCV data using direct Yahoo Finance API (no yfinance).
+    Uses .NS suffix for NSE stocks.
     """
-    ticker = f"{symbol}.NS"   # <--- THIS IS THE FIX
+    ticker = f"{symbol}.NS"
+    # Calculate number of days for 3 years (approx 756 trading days, but we fetch more)
+    # Yahoo finance uses intervals: 1d, 1wk, 1mo. We'll use 1d.
+    # We need enough data for EMA200 (~200 days). Fetch 5 years to be safe.
+    end_date = int(datetime.now().timestamp())
+    start_date = int((datetime.now() - pd.Timedelta(days=5*365)).timestamp())
+    
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+    params = {
+        'period1': start_date,
+        'period2': end_date,
+        'interval': '1d',
+        'includePrePost': 'false',
+        'events': 'div,splits'
+    }
+    
     for attempt in range(MAX_RETRIES):
         try:
-            stock = yf.Ticker(ticker)
-            df = stock.history(period=period, interval="1d", auto_adjust=False)
+            response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+            if response.status_code != 200:
+                logger.warning(f"{symbol}: HTTP {response.status_code}")
+                time.sleep(2)
+                continue
             
-            if df.empty:
-                logger.warning(f"{symbol}: No data returned from yfinance")
+            data = response.json()
+            
+            # Parse the response
+            if 'chart' not in data or 'result' not in data['chart'] or not data['chart']['result']:
+                logger.warning(f"{symbol}: No data in response")
                 return None
             
-            # Need at least 200 trading days for EMA200 stability
-            if len(df) < 200:
+            result = data['chart']['result'][0]
+            timestamps = result['timestamp']
+            quote = result['indicators']['quote'][0]
+            
+            # Extract columns
+            opens = quote.get('open', [])
+            highs = quote.get('high', [])
+            lows = quote.get('low', [])
+            closes = quote.get('close', [])
+            volumes = quote.get('volume', [])
+            
+            # Build DataFrame
+            df = pd.DataFrame({
+                'Open': opens,
+                'High': highs,
+                'Low': lows,
+                'Close': closes,
+                'Volume': volumes
+            })
+            
+            # Convert timestamp to datetime index
+            df.index = pd.to_datetime(timestamps, unit='s')
+            
+            # Remove rows with NaN in Close (non-trading days)
+            df = df.dropna(subset=['Close'])
+            
+            if df.empty or len(df) < 200:
                 logger.warning(f"{symbol}: Only {len(df)} days, need 200+")
                 return None
             
-            # Select and rename columns to standard names
-            df = df[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+            # Sort by date
             df.sort_index(inplace=True)
             return df
             
         except Exception as e:
             logger.warning(f"{symbol} attempt {attempt+1} failed: {str(e)[:100]}")
             if attempt < MAX_RETRIES - 1:
-                time.sleep(2)
+                time.sleep(3 * (attempt + 1))
     return None
 
 
@@ -94,10 +145,7 @@ def calculate_emas(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def compute_metrics(df: pd.DataFrame, symbol: str) -> Optional[Dict]:
-    """
-    Extract latest metrics and compute trend indicators.
-    Returns None if any critical data is missing.
-    """
+    """Extract latest metrics and compute trend indicators."""
     try:
         if df is None or df.empty:
             return None
@@ -229,7 +277,7 @@ def calculate_trend_scores(stocks_data: List[Dict]) -> List[Dict]:
 def run_scanner():
     """Main execution."""
     start_time = datetime.now()
-    logger.info("Starting NSE Nifty 500 Trend Strength Scanner (FIXED VERSION)")
+    logger.info("Starting NSE Nifty 500 Trend Strength Scanner (Direct Yahoo API)")
     
     symbols = load_symbols(SYMBOLS_FILE)
     if not symbols:
@@ -241,7 +289,7 @@ def run_scanner():
     for symbol in tqdm(symbols, desc="Scanning stocks"):
         time.sleep(REQUEST_DELAY)
         
-        df = fetch_stock_data(symbol, period=f"{YEARS_OF_DATA}y")
+        df = fetch_stock_data_direct(symbol, period=f"{YEARS_OF_DATA}y")
         if df is None:
             failed_symbols.append(symbol)
             continue
@@ -280,13 +328,15 @@ def run_scanner():
         json.dump(output, f, indent=2)
     
     logger.info(f"Results saved to {OUTPUT_FILE}")
-    logger.info(f"Top 5: {[s['symbol'] for s in ranked_stocks[:5]]}")
+    if ranked_stocks:
+        logger.info(f"Top 5: {[s['symbol'] for s in ranked_stocks[:5]]}")
     
     print("\n" + "="*50)
     print("SCAN COMPLETE")
     print(f"Total scanned: {len(ranked_stocks)}")
     print(f"Bullish aligned: {bullish_count}")
-    print(f"Avg trend score: {sum(s['trend_score'] for s in ranked_stocks)/len(ranked_stocks):.1f}")
+    if ranked_stocks:
+        print(f"Avg trend score: {sum(s['trend_score'] for s in ranked_stocks)/len(ranked_stocks):.1f}")
     print("="*50)
 
 
