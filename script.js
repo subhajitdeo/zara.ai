@@ -13,8 +13,18 @@ function getPosition(value, minVal, maxVal) {
     return Math.min(100, Math.max(0, pct));
 }
 
+// Helper: get color based on score (0=red, 50=yellow, 100=green)
+function getScoreColor(score) {
+    if (score >= 80) return "#22C55E"; // green
+    if (score >= 60) return "#A3E635"; // light green
+    if (score >= 40) return "#FACC15"; // yellow
+    if (score >= 20) return "#F97316"; // orange
+    return "#EF4444"; // red
+}
+
 function createCard(stock) {
     const positive = stock.change >= 0;
+    const scoreColor = getScoreColor(stock.score);
     const card = document.createElement("div");
     card.className = "stock-card";
 
@@ -43,6 +53,9 @@ function createCard(stock) {
             <div class="price">₹${stock.price.toLocaleString()}</div>
             <div class="change ${positive ? "positive" : "negative"}">
                 ${positive ? "+" : ""}${stock.change}%
+            </div>
+            <div class="score-badge" style="background:${scoreColor}20; border:1px solid ${scoreColor}; color:${scoreColor};">
+                STRENGTH ${stock.score}
             </div>
         </div>
         <div class="ema-values">
