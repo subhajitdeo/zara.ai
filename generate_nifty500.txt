@@ -1,0 +1,13 @@
+import requests
+import pandas as pd
+
+# Try fetching from a reliable public source
+url = "https://gist.githubusercontent.com/ishandeveloper/9499cbd38f157f0e05e3/raw/nifty500.csv"
+try:
+    df = pd.read_csv(url)
+    symbols = df['Symbol'].tolist()
+    with open('nifty500.txt', 'w') as f:
+        f.write("\n".join(symbols))
+    print(f"✅ Updated nifty500.txt with {len(symbols)} symbols")
+except Exception as e:
+    print(f"Error fetching list: {e}")
