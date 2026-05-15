@@ -1,84 +1,43 @@
-body {
-    margin: 0;
-    padding: 20px;
-    background: #0f172a;
-    color: white;
-    font-family: Arial, sans-serif;
+body{
+    background:#0f172a;
+    color:white;
+    font-family:Arial;
+    padding:15px;
 }
 
-.container {
-    max-width: 1400px;
-    margin: auto;
+.stock-card{
+    background:#111827;
+    border-radius:15px;
+    margin-bottom:15px;
+    overflow:hidden;
 }
 
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
+.stock-header{
+    padding:18px;
+    display:flex;
+    justify-content:space-between;
+    cursor:pointer;
 }
 
-.topbar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+.details{
+    display:none;
+    padding:20px;
+    background:#0b1220;
 }
 
-input {
-    flex: 1;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    outline: none;
-    background: #1e293b;
-    color: white;
+.bar{
+    height:12px;
+    background:#1e293b;
+    border-radius:20px;
+    overflow:hidden;
+    margin-bottom:15px;
 }
 
-button {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 10px;
-    background: #22c55e;
-    color: white;
-    cursor: pointer;
-    font-weight: bold;
+.fill{
+    height:100%;
 }
 
-button:hover {
-    opacity: 0.9;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #111827;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-th,
-td {
-    padding: 12px;
-    text-align: center;
-}
-
-th {
-    background: #1e293b;
-}
-
-tr:nth-child(even) {
-    background: #1f2937;
-}
-
-.green {
-    color: #22c55e;
-    font-weight: bold;
-}
-
-.red {
-    color: #ef4444;
-    font-weight: bold;
-}
-
-#lastUpdated {
-    margin-bottom: 15px;
-    color: #94a3b8;
-}
+.ema20{background:#3b82f6;}
+.ema50{background:#22c55e;}
+.ema100{background:#f59e0b;}
+.ema200{background:#ec4899;}
