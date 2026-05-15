@@ -1,6 +1,6 @@
 """
 NSE Nifty 500 Trend Strength Scanner
-Uses 'bhavcopy' library with a fallback to 'nsefeed' for maximum reliability.
+Uses nsepython (official NSE India API wrapper) – no API key, works in GitHub Actions.
 """
 
 import json
@@ -17,7 +17,7 @@ from tqdm import tqdm
 SYMBOLS_FILE = "nifty500.txt"
 OUTPUT_FILE = "data/results.json"
 YEARS_OF_DATA = 3
-REQUEST_DELAY = 0.3
+REQUEST_DELAY = 0.5       # seconds between stocks
 MAX_RETRIES = 2
 
 WEIGHTS = {
@@ -37,149 +37,71 @@ logger = logging.getLogger(__name__)
 
 
 def load_symbols(file_path: str) -> List[str]:
-    """Load NSE symbols from text file."""
+    """Load NSE symbols from text file (one per line)."""
     try:
         with open(file_path, 'r') as f:
             symbols = [line.strip().upper() for line in f if line.strip()]
-        logger.info(f"Loaded {len(symbols)} symbols")
+        logger.info(f"Loaded {len(symbols)} symbols from {file_path}")
         return symbols
     except FileNotFoundError:
         logger.error(f"Symbol file {file_path} not found!")
         return []
 
 
-def fetch_stock_data_bhavcopy(symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
+def fetch_stock_data_nsepython(symbol: str) -> Optional[pd.DataFrame]:
     """
-    Fetch daily OHLCV data using bhavcopy library.
-    This is the primary method.
+    Fetch daily OHLCV data using nsepython.
+    Directly calls NSE India's historical data API.
     """
     try:
-        import bhavcopy
+        from nsepython import nse_eq_history
         
+        # Date range: last 3 years + buffer
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=years * 365 + 30)
+        start_date = end_date - timedelta(days=YEARS_OF_DATA*365 + 30)
         
-        # bhavcopy expects date objects
-        from datetime import date as date_type
-        start_date_obj = date_type(start_date.year, start_date.month, start_date.day)
-        end_date_obj = date_type(end_date.year, end_date.month, end_date.day)
+        from_date_str = start_date.strftime("%d-%m-%Y")
+        to_date_str = end_date.strftime("%d-%m-%Y")
         
-        # Create a temporary directory for bhavcopy files
-        temp_dir = f"temp_bhav_{symbol}"
-        os.makedirs(temp_dir, exist_ok=True)
+        # Fetch data
+        data = nse_eq_history(symbol, from_date_str, to_date_str, series="EQ")
         
-        # Initialize bhavcopy for equities
-        nse = bhavcopy("equities", start_date_obj, end_date_obj, temp_dir, wait_time=[1, 2])
-        nse.get_data()
-        
-        # Read the generated CSV file
-        csv_files = [f for f in os.listdir(temp_dir) if f.endswith('.csv')]
-        if not csv_files:
-            logger.warning(f"{symbol}: No CSV file generated")
-            # Cleanup
-            import shutil
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        if not data or len(data) == 0:
+            logger.warning(f"{symbol}: No data returned")
             return None
         
-        # Read the combined CSV
-        df = pd.read_csv(os.path.join(temp_dir, csv_files[0]))
-        
-        # Cleanup temp directory
-        import shutil
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        
-        if df.empty or len(df) < 200:
-            logger.warning(f"{symbol}: Only {len(df)} days, need 200+")
-            return None
-        
-        # Standardize column names (bhavcopy uses lowercase)
-        df = df.rename(columns={
-            'symbol': 'Symbol',
-            'series': 'Series',
-            'open': 'Open',
-            'high': 'High',
-            'low': 'Low',
-            'close': 'Close',
-            'volume': 'Volume',
-            'timestamp': 'Date'
-        })
-        
-        # Filter for EQ series only
-        if 'Series' in df.columns:
-            df = df[df['Series'] == 'EQ']
-        
-        # Convert date column to datetime and set as index
-        if 'Date' in df.columns:
-            df['Date'] = pd.to_datetime(df['Date'])
-            df.set_index('Date', inplace=True)
-        
-        # Sort by date
+        # Convert to DataFrame
+        df = pd.DataFrame.from_dict(data, orient='index')
+        df.index = pd.to_datetime(df.index)
         df.sort_index(inplace=True)
         
-        # Ensure we have the required columns
-        required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-        for col in required_cols:
-            if col not in df.columns:
-                logger.warning(f"{symbol}: Missing column {col}")
-                return None
+        # Rename columns (nsepython uses uppercase)
+        df = df.rename(columns={
+            'OPEN': 'Open',
+            'HIGH': 'High',
+            'LOW': 'Low',
+            'CLOSE': 'Close',
+            'VOLUME': 'Volume'
+        })
         
-        return df[required_cols].copy()
+        # Keep only OHLCV columns
+        df = df[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
         
-    except Exception as e:
-        logger.warning(f"{symbol}: bhavcopy failed - {str(e)[:100]}")
-        return None
-
-
-def fetch_stock_data_nsefeed(symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
-    """
-    Fetch daily OHLCV data using nsefeed library (yfinance-style API).
-    This is the fallback method.
-    """
-    try:
-        import nsefeed as nf
+        # Convert to numeric
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        # Calculate date range
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=years * 365 + 30)
-        
-        # Use yfinance-style Ticker API
-        ticker = nf.Ticker(symbol)
-        df = ticker.history(start=start_date.strftime("%Y-%m-%d"), 
-                           end=end_date.strftime("%Y-%m-%d"))
-        
-        if df is None or df.empty:
-            logger.warning(f"{symbol}: No data from nsefeed")
-            return None
+        df.dropna(subset=['Close'], inplace=True)
         
         if len(df) < 200:
             logger.warning(f"{symbol}: Only {len(df)} days, need 200+")
             return None
         
-        # Standardize column names (nsefeed uses lowercase)
-        df.columns = [col.capitalize() for col in df.columns]
-        
-        return df[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
-        
-    except ImportError:
-        logger.warning("nsefeed not installed, skipping fallback")
-        return None
-    except Exception as e:
-        logger.warning(f"{symbol}: nsefeed failed - {str(e)[:100]}")
-        return None
-
-
-def fetch_stock_data(symbol: str, years: int = 3) -> Optional[pd.DataFrame]:
-    """
-    Wrapper function that tries bhavcopy first, then falls back to nsefeed.
-    """
-    # Try primary provider (bhavcopy)
-    df = fetch_stock_data_bhavcopy(symbol, years)
-    if df is not None:
         return df
-    
-    # Try fallback provider (nsefeed)
-    logger.info(f"{symbol}: Falling back to nsefeed")
-    return fetch_stock_data_nsefeed(symbol, years)
+        
+    except Exception as e:
+        logger.warning(f"{symbol}: nsepython error - {str(e)[:100]}")
+        return None
 
 
 def calculate_emas(df: pd.DataFrame) -> pd.DataFrame:
@@ -208,22 +130,29 @@ def compute_metrics(df: pd.DataFrame, symbol: str) -> Optional[Dict]:
             logger.debug(f"{symbol}: Missing EMA values")
             return None
         
+        # Daily gain
         prev_close = df['Close'].iloc[-2] if len(df) > 1 else latest['Close']
         daily_gain_pct = ((latest['Close'] - prev_close) / prev_close) * 100
         
+        # Relative volume
         vol_series = df['Volume'].iloc[-21:-1]
         avg_volume_20 = vol_series.mean() if len(vol_series) >= 10 else latest['Volume']
         rel_volume = latest['Volume'] / avg_volume_20 if avg_volume_20 > 0 else 1.0
         
+        # EMA separation
         ema_sep_pct = ((latest['EMA20'] - latest['EMA200']) / latest['EMA200']) * 100
+        
+        # Price distance from EMA20
         price_dist_pct = ((latest['Close'] - latest['EMA20']) / latest['EMA20']) * 100
         
+        # Momentum (5-day)
         if len(df) >= 6:
             close_5d_ago = df['Close'].iloc[-6]
             momentum_pct = ((latest['Close'] - close_5d_ago) / close_5d_ago) * 100
         else:
             momentum_pct = daily_gain_pct
         
+        # Bullish alignment condition
         is_bullish = (
             latest['Close'] > latest['EMA20'] > latest['EMA50'] > latest['EMA100'] > latest['EMA200']
         )
@@ -246,7 +175,7 @@ def compute_metrics(df: pd.DataFrame, symbol: str) -> Optional[Dict]:
             "is_bullish_aligned": is_bullish
         }
     except Exception as e:
-        logger.error(f"{symbol}: compute_metrics crashed - {str(e)}")
+        logger.error(f"{symbol}: compute_metrics error - {str(e)}")
         return None
 
 
@@ -317,66 +246,60 @@ def calculate_trend_scores(stocks_data: List[Dict]) -> List[Dict]:
 def run_scanner():
     """Main execution."""
     start_time = datetime.now()
-    logger.info("Starting NSE Nifty 500 Trend Strength Scanner (bhavcopy + nsefeed)")
+    logger.info("=== NSE Nifty 500 Trend Strength Scanner (nsepython) ===")
     
     symbols = load_symbols(SYMBOLS_FILE)
     if not symbols:
         sys.exit(1)
     
-    all_stocks_data = []
-    failed_symbols = []
+    all_stocks = []
+    failed = []
     
-    for symbol in tqdm(symbols, desc="Scanning stocks"):
+    for symbol in tqdm(symbols, desc="Scanning Nifty 500"):
         time.sleep(REQUEST_DELAY)
-        
-        # This will try bhavcopy first, then nsefeed
-        df = fetch_stock_data(symbol, years=YEARS_OF_DATA)
+        df = fetch_stock_data_nsepython(symbol)
         if df is None:
-            failed_symbols.append(symbol)
+            failed.append(symbol)
             continue
         
         metrics = compute_metrics(df, symbol)
         if metrics:
-            all_stocks_data.append(metrics)
+            all_stocks.append(metrics)
         else:
-            failed_symbols.append(symbol)
+            failed.append(symbol)
     
-    logger.info(f"Successfully processed: {len(all_stocks_data)} stocks")
-    logger.info(f"Failed: {len(failed_symbols)} stocks")
+    logger.info(f"Successful: {len(all_stocks)}, Failed: {len(failed)}")
     
-    if not all_stocks_data:
-        logger.error("No valid stock data. Exiting.")
+    if not all_stocks:
+        logger.error("No stocks processed – exiting")
         sys.exit(1)
     
-    ranked_stocks = calculate_trend_scores(all_stocks_data)
-    bullish_count = sum(1 for s in ranked_stocks if s.get("is_bullish_aligned", False))
+    ranked = calculate_trend_scores(all_stocks)
+    bullish_count = sum(1 for s in ranked if s.get("is_bullish_aligned", False))
     
     output = {
         "last_updated": datetime.now().isoformat(),
         "last_updated_readable": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
         "total_stocks_scanned": len(symbols),
-        "successful_stocks": len(ranked_stocks),
+        "successful_stocks": len(ranked),
         "bullish_count": bullish_count,
-        "failed_count": len(failed_symbols),
+        "failed_count": len(failed),
         "scanner_duration_seconds": round((datetime.now() - start_time).total_seconds(), 1),
-        "stocks": ranked_stocks
+        "stocks": ranked
     }
     
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-    
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(output, f, indent=2)
     
     logger.info(f"Results saved to {OUTPUT_FILE}")
-    if ranked_stocks:
-        logger.info(f"Top 5: {[s['symbol'] for s in ranked_stocks[:5]]}")
+    if ranked:
+        logger.info(f"Top 5: {[s['symbol'] for s in ranked[:5]]}")
     
     print("\n" + "="*50)
-    print("SCAN COMPLETE")
-    print(f"Total scanned: {len(ranked_stocks)}")
+    print(f"SCAN COMPLETE: {len(ranked)} stocks")
     print(f"Bullish aligned: {bullish_count}")
-    if ranked_stocks:
-        print(f"Avg trend score: {sum(s['trend_score'] for s in ranked_stocks)/len(ranked_stocks):.1f}")
+    print(f"Average trend score: {sum(s['trend_score'] for s in ranked)/len(ranked):.1f}")
     print("="*50)
 
 
