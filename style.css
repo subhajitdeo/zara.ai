@@ -1,43 +1,60 @@
-body{
-    background:#0f172a;
-    color:white;
-    font-family:Arial;
-    padding:15px;
+.chart-container{
+    position:relative;
+    height:80px;
+    margin-top:20px;
+    margin-bottom:20px;
 }
 
-.stock-card{
-    background:#111827;
-    border-radius:15px;
-    margin-bottom:15px;
-    overflow:hidden;
+.line{
+    position:absolute;
+    top:40px;
+    left:5%;
+    width:90%;
+    height:4px;
+    background:white;
+    border-radius:10px;
 }
 
-.stock-header{
-    padding:18px;
+.dot{
+    position:absolute;
+    top:28px;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    transform:translateX(-50%);
+}
+
+.price{
+    background:#ffffff;
+    border:3px solid #3b82f6;
+}
+
+.ema20{
+    background:#f59e0b;
+}
+
+.ema50{
+    background:#a78bfa;
+}
+
+.ema100{
+    background:#22c55e;
+}
+
+.ema200{
+    background:#ec4899;
+}
+
+.legend{
     display:flex;
-    justify-content:space-between;
-    cursor:pointer;
+    flex-direction:column;
+    gap:10px;
 }
 
-.details{
-    display:none;
-    padding:20px;
-    background:#0b1220;
+.legend-dot{
+    display:inline-block;
+    width:15px;
+    height:15px;
+    border-radius:50%;
+    margin-right:10px;
 }
-
-.bar{
-    height:12px;
-    background:#1e293b;
-    border-radius:20px;
-    overflow:hidden;
-    margin-bottom:15px;
-}
-
-.fill{
-    height:100%;
-}
-
-.ema20{background:#3b82f6;}
-.ema50{background:#22c55e;}
-.ema100{background:#f59e0b;}
-.ema200{background:#ec4899;}
