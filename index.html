@@ -3,125 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>NSE Trend Strength Scanner | Nifty 500 EMA Dashboard</title>
+    <title>NSE Trend Strength Scanner | Nifty 500</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
     <div class="glass-container">
-        <!-- Header -->
         <div class="dashboard-header">
             <div class="logo-section">
                 <i class="fas fa-chart-line"></i>
                 <h1>NSE Trend Strength Scanner</h1>
                 <span class="badge">Nifty 500</span>
             </div>
-            <div class="header-actions">
-                <button id="refreshBtn" class="btn-glass">
-                    <i class="fas fa-sync-alt"></i> Refresh Data
-                </button>
-            </div>
+            <button id="refreshBtn" class="btn-glass"><i class="fas fa-sync-alt"></i> Refresh Data</button>
         </div>
 
-        <!-- Market Summary Cards -->
-        <div class="summary-grid" id="summaryGrid">
-            <div class="summary-card">
-                <i class="fas fa-chart-simple"></i>
-                <div class="summary-info">
-                    <span class="label">Total Scanned</span>
-                    <span class="value" id="totalScanned">--</span>
-                </div>
-            </div>
-            <div class="summary-card">
-                <i class="fas fa-bullhorn"></i>
-                <div class="summary-info">
-                    <span class="label">Bullish Aligned</span>
-                    <span class="value" id="bullishCount">--</span>
-                </div>
-            </div>
-            <div class="summary-card">
-                <i class="fas fa-chart-line"></i>
-                <div class="summary-info">
-                    <span class="label">Avg Trend Score</span>
-                    <span class="value" id="avgScore">--</span>
-                </div>
-            </div>
-            <div class="summary-card">
-                <i class="fas fa-clock"></i>
-                <div class="summary-info">
-                    <span class="label">Last Update</span>
-                    <span class="value" id="lastUpdated">--</span>
-                </div>
-            </div>
+        <div class="summary-grid">
+            <div class="summary-card"><i class="fas fa-chart-simple"></i><div class="summary-info"><span class="label">Total Scanned</span><span class="value" id="totalScanned">--</span></div></div>
+            <div class="summary-card"><i class="fas fa-bullhorn"></i><div class="summary-info"><span class="label">Bullish Aligned</span><span class="value" id="bullishCount">--</span></div></div>
+            <div class="summary-card"><i class="fas fa-chart-line"></i><div class="summary-info"><span class="label">Avg Trend Score</span><span class="value" id="avgScore">--</span></div></div>
+            <div class="summary-card"><i class="fas fa-clock"></i><div class="summary-info"><span class="label">Last Update</span><span class="value" id="lastUpdated">--</span></div></div>
         </div>
 
-        <!-- Controls -->
         <div class="controls-bar">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search symbol...">
-            </div>
-            <div class="filter-toggle">
-                <button id="filterBullishBtn" class="filter-btn">
-                    <i class="fas fa-filter"></i> Bullish Only
-                </button>
-                <button id="resetFilterBtn" class="filter-btn reset">
-                    <i class="fas fa-undo-alt"></i> Reset
-                </button>
-            </div>
-            <div class="sort-hint">
-                <i class="fas fa-arrow-up-wide-short"></i> Click column to sort
-            </div>
+            <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchInput" placeholder="Search symbol..."></div>
+            <div class="filter-toggle"><button id="filterBullishBtn" class="filter-btn"><i class="fas fa-filter"></i> Bullish Only</button><button id="resetFilterBtn" class="filter-btn reset"><i class="fas fa-undo-alt"></i> Reset</button></div>
         </div>
 
-        <!-- Top Stocks Section -->
-        <div class="section-title">
-            <i class="fas fa-trophy"></i>
-            <h2>Top Ranked Stocks</h2>
-        </div>
-        <div class="top-stocks-grid" id="topStocksGrid">
-            <!-- Dynamically populated -->
-        </div>
+        <div class="section-title"><i class="fas fa-trophy"></i><h2>Top Ranked Stocks</h2></div>
+        <div class="top-stocks-grid" id="topStocksGrid"></div>
 
-        <!-- Strong Bullish Setups -->
-        <div class="section-title">
-            <i class="fas fa-fire"></i>
-            <h2>Strong Bullish Setups</h2>
-        </div>
-        <div class="bullish-grid" id="bullishGrid">
-            <!-- Dynamically populated -->
-        </div>
+        <div class="section-title"><i class="fas fa-fire"></i><h2>Strong Bullish Setups</h2></div>
+        <div class="bullish-grid" id="bullishGrid"></div>
 
-        <!-- Full Data Table -->
-        <div class="section-title">
-            <i class="fas fa-table-list"></i>
-            <h2>Complete Stock Rankings</h2>
-        </div>
+        <div class="section-title"><i class="fas fa-table-list"></i><h2>Complete Rankings</h2></div>
         <div class="table-wrapper">
             <table id="stocksTable">
-                <thead>
-                    <tr>
-                        <th data-sort="rank">Rank <i class="sort-icon"></i></th>
-                        <th data-sort="symbol">Symbol <i class="sort-icon"></i></th>
-                        <th data-sort="price">Price <i class="sort-icon"></i></th>
-                        <th data-sort="ema20">EMA20 <i class="sort-icon"></i></th>
-                        <th data-sort="ema50">EMA50 <i class="sort-icon"></i></th>
-                        <th data-sort="ema100">EMA100 <i class="sort-icon"></i></th>
-                        <th data-sort="ema200">EMA200 <i class="sort-icon"></i></th>
-                        <th data-sort="trend_score">Trend Score <i class="sort-icon"></i></th>
-                        <th data-sort="daily_gain_pct">Daily Gain % <i class="sort-icon"></i></th>
-                        <th data-sort="volume">Volume <i class="sort-icon"></i></th>
-                        <th data-sort="status">Trend Status <i class="sort-icon"></i></th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <tr><td colspan="11" class="loading-cell"><div class="spinner"></div> Loading market data...</td></tr>
-                </tbody>
+                <thead><tr><th data-sort="rank">Rank</th><th data-sort="symbol">Symbol</th><th data-sort="price">Price</th><th data-sort="ema20">EMA20</th><th data-sort="ema50">EMA50</th><th data-sort="ema100">EMA100</th><th data-sort="ema200">EMA200</th><th data-sort="trend_score">Trend Score</th><th data-sort="daily_gain_pct">Daily Gain %</th><th data-sort="volume">Volume</th><th data-sort="status">Status</th></tr></thead>
+                <tbody id="tableBody"><tr><td colspan="11" class="loading-cell"><div class="spinner"></div> Loading...</td></tr></tbody>
             </table>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
