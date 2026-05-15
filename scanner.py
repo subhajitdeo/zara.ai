@@ -1,5 +1,5 @@
 """
-NSE Nifty 500 Trend Strength Scanner - Fixed ambiguous truth value
+NSE Nifty 500 Trend Strength Scanner - Fixed ambiguous truth value & delisted symbols
 """
 
 import json
@@ -37,12 +37,20 @@ def load_symbols():
     return symbols
 
 def fetch_stock(symbol: str) -> Optional[pd.DataFrame]:
+    """
+    Fetch daily OHLCV data using yfinance.
+    Returns None if no data or insufficient data.
+    """
     ticker = f"{symbol}.NS"
     for attempt in range(MAX_RETRIES):
         try:
             df = yf.download(ticker, period=f"{YEARS}y", progress=False, auto_adjust=False)
-            if df.empty or len(df) < 200:
-                logger.warning(f"{symbol}: insufficient data ({len(df)} days)")
+            # Fix 1: Check for empty DataFrame
+            if df.empty:
+                logger.warning(f"{symbol}: no data returned (empty DataFrame)")
+                return None
+            if len(df) < 200:
+                logger.warning(f"{symbol}: insufficient data ({len(df)} days, need 200+)")
                 return None
             df = df[['Open','High','Low','Close','Volume']].copy()
             df.sort_index(inplace=True)
@@ -61,41 +69,58 @@ def calculate_emas(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def compute_metrics(df: pd.DataFrame, symbol: str) -> Optional[Dict]:
+    """
+    Compute latest metrics using scalar values (.iloc[-1]) to avoid Series truth ambiguity.
+    """
     try:
         if df is None or df.empty:
             return None
         df = calculate_emas(df)
-        # Extract the last row and convert each value to a Python float
-        last = df.iloc[-1]
-        close = float(last['Close'])
-        ema20 = float(last['EMA20'])
-        ema50 = float(last['EMA50'])
-        ema100 = float(last['EMA100'])
-        ema200 = float(last['EMA200'])
-
+        
+        # Extract scalar values using .iloc[-1] on each column
+        close = df['Close'].iloc[-1]
+        ema20 = df['EMA20'].iloc[-1]
+        ema50 = df['EMA50'].iloc[-1]
+        ema100 = df['EMA100'].iloc[-1]
+        ema200 = df['EMA200'].iloc[-1]
+        current_vol = df['Volume'].iloc[-1]
+        
+        # Convert to Python float (already scalar, but ensure)
+        close = float(close)
+        ema20 = float(ema20)
+        ema50 = float(ema50)
+        ema100 = float(ema100)
+        ema200 = float(ema200)
+        current_vol = float(current_vol)
+        
+        # Check for any NaN in EMAs
         if any(pd.isna(x) for x in [ema20, ema50, ema100, ema200]):
             return None
-
+        
+        # Previous close for daily gain
         prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else close
         daily_gain = (close - prev_close) / prev_close * 100
-
+        
+        # Relative volume (20-day average)
         vol_series = df['Volume'].iloc[-21:-1]
-        avg_vol = float(vol_series.mean()) if len(vol_series) >= 10 else float(df['Volume'].iloc[-1])
-        current_vol = float(df['Volume'].iloc[-1])
+        avg_vol = float(vol_series.mean()) if len(vol_series) >= 10 else current_vol
         rel_vol = current_vol / avg_vol if avg_vol > 0 else 1.0
-
+        
+        # EMA separation and price distance
         ema_sep = (ema20 - ema200) / ema200 * 100
         price_dist = (close - ema20) / ema20 * 100
-
+        
+        # 5-day momentum
         if len(df) >= 6:
             close_5d_ago = float(df['Close'].iloc[-6])
             momentum = (close - close_5d_ago) / close_5d_ago * 100
         else:
             momentum = daily_gain
-
-        # Break down the comparison to avoid ambiguous truth value
+        
+        # Fix 2: Break down the bullish condition into separate boolean comparisons
+        # All terms are scalars, so no Series ambiguity
         is_bullish = (close > ema20) and (ema20 > ema50) and (ema50 > ema100) and (ema100 > ema200)
-
+        
         return {
             "symbol": symbol,
             "price": round(close, 2),
@@ -148,7 +173,7 @@ def add_scores(stocks):
 
 def main():
     start = datetime.now()
-    logger.info("Starting NSE scanner (yfinance)")
+    logger.info("Starting NSE scanner (yfinance) - fixed Series ambiguity")
     symbols = load_symbols()
     if not symbols:
         sys.exit(1)
