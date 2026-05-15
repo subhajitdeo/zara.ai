@@ -1,5 +1,4 @@
 pandas>=2.0.0
 requests>=2.31.0
 tqdm>=4.66.0
-bhavcopy>=3.0
-nsefeed>=1.0.2
+nsepython>=1.1.0
