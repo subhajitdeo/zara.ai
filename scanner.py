@@ -1,6 +1,6 @@
 """
 NSE Nifty 500 Trend Strength Scanner
-Fixed: yfinance MultiIndex columns + scalar extraction + delisted symbols
+Downloads bhavcopy CSV files from NSE archives, computes EMAs and trend scores.
 """
 
 import json
@@ -8,16 +8,16 @@ import time
 import logging
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import pandas as pd
-import yfinance as yf
+import requests
 from tqdm import tqdm
 
 SYMBOLS_FILE = "nifty500.txt"
 OUTPUT_FILE = "data/results.json"
 YEARS = 3
-DELAY = 0.3
+REQUEST_DELAY = 0.2   # seconds between symbol processing
 MAX_RETRIES = 2
 
 WEIGHTS = {
@@ -32,29 +32,76 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def load_symbols():
+    """Load symbols from nifty500.txt (one per line)."""
     with open(SYMBOLS_FILE, 'r') as f:
         symbols = [line.strip().upper() for line in f if line.strip()]
     logger.info(f"Loaded {len(symbols)} symbols")
     return symbols
 
-def fetch_stock(symbol: str) -> Optional[pd.DataFrame]:
-    ticker = f"{symbol}.NS"
-    for attempt in range(MAX_RETRIES):
-        try:
-            df = yf.download(ticker, period=f"{YEARS}y", progress=False, auto_adjust=False)
-            if df.empty or len(df) < 200:
-                logger.warning(f"{symbol}: insufficient data ({len(df)} days)")
-                return None
-            # FIX: Flatten MultiIndex columns (yfinance returns ('Close','RELIANCE.NS') etc.)
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.droplevel(1)
-            df = df[['Open','High','Low','Close','Volume']].copy()
-            df.sort_index(inplace=True)
-            return df
-        except Exception as e:
-            logger.warning(f"{symbol} attempt {attempt+1} failed: {e}")
-            time.sleep(2)
-    return None
+def get_bhavcopy_dates(years=3):
+    """Generate list of trading dates (Mon-Fri) for the last N years."""
+    end = datetime.now()
+    start = end - timedelta(days=years*365 + 30)
+    dates = []
+    cur = start
+    while cur <= end:
+        if cur.weekday() < 5:  # Monday=0 ... Friday=4
+            dates.append(cur)
+        cur += timedelta(days=1)
+    return dates
+
+def download_bhavcopy_for_date(date_obj):
+    """Download bhavcopy CSV for a given date from NSE, return DataFrame or None."""
+    try:
+        date_str = date_obj.strftime("%d%m%Y")
+        year = date_obj.year
+        month_abbr = date_obj.strftime("%b").upper()
+        url = f"https://archives.nseindia.com/content/historical/EQUITIES/{year}/{month_abbr}/cm{date_str}bhav.csv.zip"
+        r = requests.get(url, timeout=15)
+        if r.status_code != 200:
+            return None
+        with open("temp_bhav.zip", "wb") as f:
+            f.write(r.content)
+        df = pd.read_csv("temp_bhav.zip")
+        os.remove("temp_bhav.zip")
+        return df
+    except Exception as e:
+        return None
+
+def fetch_stock_data(symbol: str) -> Optional[pd.DataFrame]:
+    """
+    Build historical OHLCV for a single symbol by scanning bhavcopy files.
+    Returns DataFrame with columns: Open, High, Low, Close, Volume (all float/int).
+    """
+    trading_dates = get_bhavcopy_dates(YEARS)
+    records = []
+    for dt in trading_dates:
+        df_day = download_bhavcopy_for_date(dt)
+        if df_day is None:
+            continue
+        row = df_day[df_day["SYMBOL"] == symbol]
+        if not row.empty:
+            r = row.iloc[0]
+            records.append({
+                "Date": dt,
+                "Open": r["OPEN"],
+                "High": r["HIGH"],
+                "Low": r["LOW"],
+                "Close": r["CLOSE"],
+                "Volume": r["TOTTRDQTY"]
+            })
+        time.sleep(0.05)  # gentle throttling
+    if len(records) < 200:
+        logger.warning(f"{symbol}: only {len(records)} days, need 200+")
+        return None
+    df = pd.DataFrame(records)
+    df.set_index("Date", inplace=True)
+    df.sort_index(inplace=True)
+    # convert to numeric (already int/float, but safe)
+    for col in ["Open","High","Low","Close","Volume"]:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+    df.dropna(subset=["Close"], inplace=True)
+    return df[["Open","High","Low","Close","Volume"]]
 
 def calculate_emas(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -69,7 +116,6 @@ def compute_metrics(df: pd.DataFrame, symbol: str) -> Optional[Dict]:
         if df is None or df.empty:
             return None
         df = calculate_emas(df)
-        # Extract scalars – now works because columns are flattened
         close = float(df['Close'].iloc[-1])
         ema20 = float(df['EMA20'].iloc[-1])
         ema50 = float(df['EMA50'].iloc[-1])
@@ -90,7 +136,6 @@ def compute_metrics(df: pd.DataFrame, symbol: str) -> Optional[Dict]:
             momentum = (close - close_5d_ago) / close_5d_ago * 100
         else:
             momentum = daily_gain
-        # Separate comparisons – all scalars, no ambiguity
         is_bullish = (close > ema20) and (ema20 > ema50) and (ema50 > ema100) and (ema100 > ema200)
         return {
             "symbol": symbol,
@@ -144,20 +189,20 @@ def add_scores(stocks):
 
 def main():
     start = datetime.now()
-    logger.info("Starting NSE scanner (yfinance) - MultiIndex fix applied")
+    logger.info("Starting NSE scanner using bhavcopy (direct NSE EOD files)")
     symbols = load_symbols()
     if not symbols:
         sys.exit(1)
     all_stocks, failed = [], []
-    for sym in tqdm(symbols, desc="Scanning"):
-        time.sleep(DELAY)
-        df = fetch_stock(sym)
+    for sym in tqdm(symbols, desc="Processing"):
+        time.sleep(REQUEST_DELAY)
+        df = fetch_stock_data(sym)
         if df is None:
             failed.append(sym)
             continue
-        m = compute_metrics(df, sym)
-        if m:
-            all_stocks.append(m)
+        metrics = compute_metrics(df, sym)
+        if metrics:
+            all_stocks.append(metrics)
         else:
             failed.append(sym)
     logger.info(f"Successful: {len(all_stocks)}, Failed: {len(failed)}")
