@@ -1,1 +1,56 @@
-{}
+{
+    "last_updated": "2026-05-15 14:46:35.995737",
+    "total_stocks": 5,
+    "data": [
+        {
+            "symbol": "RELIANCE",
+            "price": 1336.4,
+            "ema20": 1386.51,
+            "ema50": 1391.42,
+            "ema100": 1408.55,
+            "ema200": 1415.03,
+            "bullish": false,
+            "score": -5.64
+        },
+        {
+            "symbol": "ICICIBANK",
+            "price": 1244.5,
+            "ema20": 1273.13,
+            "ema50": 1296.58,
+            "ema100": 1321.96,
+            "ema200": 1339.12,
+            "bullish": false,
+            "score": -7.26
+        },
+        {
+            "symbol": "HDFCBANK",
+            "price": 767.5,
+            "ema20": 777.35,
+            "ema50": 805.95,
+            "ema100": 850.08,
+            "ema200": 888.06,
+            "bullish": false,
+            "score": -14.28
+        },
+        {
+            "symbol": "TCS",
+            "price": 2264.0,
+            "ema20": 2395.31,
+            "ema50": 2502.2,
+            "ema100": 2656.48,
+            "ema200": 2863.87,
+            "bullish": false,
+            "score": -22.8
+        },
+        {
+            "symbol": "INFY",
+            "price": 1119.0,
+            "ema20": 1178.89,
+            "ema50": 1252.99,
+            "ema100": 1337.78,
+            "ema200": 1422.08,
+            "bullish": false,
+            "score": -23.26
+        }
+    ]
+}
