@@ -1,7 +1,327 @@
 {
-    "last_updated": "2026-05-15 14:46:35.995737",
-    "total_stocks": 5,
+    "last_updated": "2026-05-15 14:54:15.809860",
+    "total_stocks": 49,
     "data": [
+        {
+            "symbol": "ADANIGREEN",
+            "price": 1379.0,
+            "ema20": 1277.5,
+            "ema50": 1142.6,
+            "ema100": 1067.73,
+            "ema200": 1046.13,
+            "bullish": true,
+            "score": 28.83
+        },
+        {
+            "symbol": "ADANIPORTS",
+            "price": 1795.1,
+            "ema20": 1680.95,
+            "ema50": 1584.11,
+            "ema100": 1527.08,
+            "ema200": 1471.45,
+            "bullish": true,
+            "score": 20.42
+        },
+        {
+            "symbol": "HINDALCO",
+            "price": 1067.5,
+            "ema20": 1042.4,
+            "ema50": 999.58,
+            "ema100": 951.1,
+            "ema200": 878.67,
+            "bullish": true,
+            "score": 20.03
+        },
+        {
+            "symbol": "ADANIENT",
+            "price": 2716.0,
+            "ema20": 2434.15,
+            "ema50": 2277.05,
+            "ema100": 2236.3,
+            "ema200": 2282.09,
+            "bullish": false,
+            "score": 18.29
+        },
+        {
+            "symbol": "TATASTEEL",
+            "price": 216.84,
+            "ema20": 213.15,
+            "ema50": 206.8,
+            "ema100": 198.54,
+            "ema200": 186.32,
+            "bullish": true,
+            "score": 15.52
+        },
+        {
+            "symbol": "ONGC",
+            "price": 299.35,
+            "ema20": 290.3,
+            "ema50": 282.32,
+            "ema100": 270.55,
+            "ema200": 257.42,
+            "bullish": true,
+            "score": 15.4
+        },
+        {
+            "symbol": "NESTLEIND",
+            "price": 1430.5,
+            "ema20": 1424.89,
+            "ema50": 1355.37,
+            "ema100": 1311.2,
+            "ema200": 1269.16,
+            "bullish": true,
+            "score": 12.2
+        },
+        {
+            "symbol": "BAJAJ-AUTO",
+            "price": 10377.5,
+            "ema20": 10112.31,
+            "ema50": 9793.77,
+            "ema100": 9567.59,
+            "ema200": 9287.14,
+            "bullish": true,
+            "score": 11.26
+        },
+        {
+            "symbol": "COALINDIA",
+            "price": 462.2,
+            "ema20": 461.16,
+            "ema50": 451.87,
+            "ema100": 436.05,
+            "ema200": 415.52,
+            "bullish": true,
+            "score": 10.85
+        },
+        {
+            "symbol": "NTPC",
+            "price": 395.25,
+            "ema20": 395.08,
+            "ema50": 386.28,
+            "ema100": 372.54,
+            "ema200": 357.93,
+            "bullish": true,
+            "score": 10.09
+        },
+        {
+            "symbol": "JSWSTEEL",
+            "price": 1278.8,
+            "ema20": 1261.21,
+            "ema50": 1233.92,
+            "ema100": 1207.32,
+            "ema200": 1162.0,
+            "bullish": true,
+            "score": 9.71
+        },
+        {
+            "symbol": "SUNPHARMA",
+            "price": 1878.2,
+            "ema20": 1804.89,
+            "ema50": 1766.47,
+            "ema100": 1743.29,
+            "ema200": 1720.57,
+            "bullish": true,
+            "score": 8.89
+        },
+        {
+            "symbol": "APOLLOHOSP",
+            "price": 8082.5,
+            "ema20": 7855.99,
+            "ema50": 7681.36,
+            "ema100": 7556.45,
+            "ema200": 7425.17,
+            "bullish": true,
+            "score": 8.58
+        },
+        {
+            "symbol": "DIVISLAB",
+            "price": 6760.5,
+            "ema20": 6570.35,
+            "ema50": 6388.59,
+            "ema100": 6328.53,
+            "ema200": 6263.25,
+            "bullish": true,
+            "score": 7.73
+        },
+        {
+            "symbol": "GRASIM",
+            "price": 2933.8,
+            "ema20": 2863.61,
+            "ema50": 2801.9,
+            "ema100": 2786.01,
+            "ema200": 2762.88,
+            "bullish": true,
+            "score": 6.06
+        },
+        {
+            "symbol": "DRREDDY",
+            "price": 1336.7,
+            "ema20": 1290.42,
+            "ema50": 1277.5,
+            "ema100": 1268.44,
+            "ema200": 1260.2,
+            "bullish": true,
+            "score": 5.97
+        },
+        {
+            "symbol": "POWERGRID",
+            "price": 305.85,
+            "ema20": 310.45,
+            "ema50": 304.93,
+            "ema100": 295.78,
+            "ema200": 288.46,
+            "bullish": false,
+            "score": 5.96
+        },
+        {
+            "symbol": "TITAN",
+            "price": 4169.1,
+            "ema20": 4284.16,
+            "ema50": 4266.67,
+            "ema100": 4167.38,
+            "ema200": 3984.3,
+            "bullish": false,
+            "score": 4.7
+        },
+        {
+            "symbol": "ASIANPAINT",
+            "price": 2605.6,
+            "ema20": 2507.22,
+            "ema50": 2448.76,
+            "ema100": 2465.87,
+            "ema200": 2490.72,
+            "bullish": false,
+            "score": 4.62
+        },
+        {
+            "symbol": "CIPLA",
+            "price": 1432.1,
+            "ema20": 1328.4,
+            "ema50": 1311.45,
+            "ema100": 1343.52,
+            "ema200": 1394.8,
+            "bullish": false,
+            "score": 3.04
+        },
+        {
+            "symbol": "EICHERMOT",
+            "price": 7014.5,
+            "ema20": 7140.19,
+            "ema50": 7168.98,
+            "ema100": 7144.25,
+            "ema200": 6852.94,
+            "bullish": false,
+            "score": 2.44
+        },
+        {
+            "symbol": "INDUSINDBK",
+            "price": 886.4,
+            "ema20": 895.96,
+            "ema50": 879.71,
+            "ema100": 870.69,
+            "ema200": 870.66,
+            "bullish": false,
+            "score": 1.82
+        },
+        {
+            "symbol": "PIDILITIND",
+            "price": 1467.7,
+            "ema20": 1419.37,
+            "ema50": 1405.29,
+            "ema100": 1420.22,
+            "ema200": 1442.94,
+            "bullish": false,
+            "score": 1.78
+        },
+        {
+            "symbol": "LT",
+            "price": 3909.0,
+            "ema20": 3961.9,
+            "ema50": 3940.16,
+            "ema100": 3926.11,
+            "ema200": 3858.46,
+            "bullish": false,
+            "score": 1.33
+        },
+        {
+            "symbol": "AXISBANK",
+            "price": 1244.8,
+            "ema20": 1280.83,
+            "ema50": 1289.14,
+            "ema100": 1281.22,
+            "ema200": 1249.16,
+            "bullish": false,
+            "score": -0.27
+        },
+        {
+            "symbol": "SBIN",
+            "price": 963.2,
+            "ema20": 1017.37,
+            "ema50": 1039.57,
+            "ema100": 1027.68,
+            "ema200": 974.31,
+            "bullish": false,
+            "score": -0.82
+        },
+        {
+            "symbol": "SBILIFE",
+            "price": 1864.5,
+            "ema20": 1857.83,
+            "ema50": 1889.09,
+            "ema100": 1915.72,
+            "ema200": 1892.06,
+            "bullish": false,
+            "score": -1.44
+        },
+        {
+            "symbol": "HINDUNILVR",
+            "price": 2272.2,
+            "ema20": 2267.48,
+            "ema50": 2253.76,
+            "ema100": 2282.27,
+            "ema200": 2326.96,
+            "bullish": false,
+            "score": -2.35
+        },
+        {
+            "symbol": "HEROMOTOCO",
+            "price": 5064.5,
+            "ema20": 5143.25,
+            "ema50": 5236.85,
+            "ema100": 5312.39,
+            "ema200": 5206.95,
+            "bullish": false,
+            "score": -2.72
+        },
+        {
+            "symbol": "BAJFINANCE",
+            "price": 910.45,
+            "ema20": 924.85,
+            "ema50": 923.95,
+            "ema100": 936.54,
+            "ema200": 935.8,
+            "bullish": false,
+            "score": -2.73
+        },
+        {
+            "symbol": "ULTRACEMCO",
+            "price": 11487.0,
+            "ema20": 11738.63,
+            "ema50": 11756.9,
+            "ema100": 11847.29,
+            "ema200": 11863.08,
+            "bullish": false,
+            "score": -3.2
+        },
+        {
+            "symbol": "KOTAKBANK",
+            "price": 387.05,
+            "ema20": 378.83,
+            "ema50": 383.21,
+            "ema100": 393.47,
+            "ema200": 400.81,
+            "bullish": false,
+            "score": -3.41
+        },
         {
             "symbol": "RELIANCE",
             "price": 1336.4,
@@ -11,6 +331,56 @@
             "ema200": 1415.03,
             "bullish": false,
             "score": -5.64
+        },
+        {
+            "symbol": "M&M",
+            "price": 3123.1,
+            "ema20": 3178.17,
+            "ema50": 3213.18,
+            "ema100": 3296.79,
+            "ema200": 3310.64,
+            "bullish": false,
+            "score": -5.78
+        },
+        {
+            "symbol": "SHREECEM",
+            "price": 24970.0,
+            "ema20": 24913.11,
+            "ema50": 24954.42,
+            "ema100": 25554.89,
+            "ema200": 26487.2,
+            "bullish": false,
+            "score": -5.81
+        },
+        {
+            "symbol": "BRITANNIA",
+            "price": 5406.0,
+            "ema20": 5575.17,
+            "ema50": 5675.23,
+            "ema100": 5752.88,
+            "ema200": 5740.8,
+            "bullish": false,
+            "score": -5.94
+        },
+        {
+            "symbol": "UPL",
+            "price": 632.25,
+            "ema20": 641.54,
+            "ema50": 649.1,
+            "ema100": 668.23,
+            "ema200": 675.71,
+            "bullish": false,
+            "score": -6.58
+        },
+        {
+            "symbol": "MARUTI",
+            "price": 13221.0,
+            "ema20": 13318.74,
+            "ema50": 13552.16,
+            "ema100": 14045.75,
+            "ema200": 14172.28,
+            "bullish": false,
+            "score": -6.86
         },
         {
             "symbol": "ICICIBANK",
@@ -23,6 +393,56 @@
             "score": -7.26
         },
         {
+            "symbol": "TECHM",
+            "price": 1370.5,
+            "ema20": 1423.77,
+            "ema50": 1441.66,
+            "ema100": 1467.33,
+            "ema200": 1486.83,
+            "bullish": false,
+            "score": -8.04
+        },
+        {
+            "symbol": "BAJAJFINSV",
+            "price": 1728.1,
+            "ema20": 1773.35,
+            "ema50": 1807.3,
+            "ema100": 1866.32,
+            "ema200": 1909.62,
+            "bullish": false,
+            "score": -9.86
+        },
+        {
+            "symbol": "ITC",
+            "price": 309.45,
+            "ema20": 306.85,
+            "ema50": 309.44,
+            "ema100": 323.54,
+            "ema200": 347.79,
+            "bullish": false,
+            "score": -11.32
+        },
+        {
+            "symbol": "HDFCLIFE",
+            "price": 608.7,
+            "ema20": 607.08,
+            "ema50": 625.57,
+            "ema100": 659.33,
+            "ema200": 689.05,
+            "bullish": false,
+            "score": -12.12
+        },
+        {
+            "symbol": "BPCL",
+            "price": 284.45,
+            "ema20": 299.89,
+            "ema50": 310.38,
+            "ema100": 321.57,
+            "ema200": 322.2,
+            "bullish": false,
+            "score": -12.2
+        },
+        {
             "symbol": "HDFCBANK",
             "price": 767.5,
             "ema20": 777.35,
@@ -33,6 +453,16 @@
             "score": -14.28
         },
         {
+            "symbol": "WIPRO",
+            "price": 190.0,
+            "ema20": 196.46,
+            "ema50": 202.09,
+            "ema100": 212.26,
+            "ema200": 224.56,
+            "bullish": false,
+            "score": -16.34
+        },
+        {
             "symbol": "TCS",
             "price": 2264.0,
             "ema20": 2395.31,
@@ -41,6 +471,16 @@
             "ema200": 2863.87,
             "bullish": false,
             "score": -22.8
+        },
+        {
+            "symbol": "HCLTECH",
+            "price": 1132.6,
+            "ema20": 1211.43,
+            "ema50": 1296.65,
+            "ema100": 1374.74,
+            "ema200": 1438.73,
+            "bullish": false,
+            "score": -23.21
         },
         {
             "symbol": "INFY",
