@@ -1,0 +1,14 @@
+{
+  "last_updated": "2026-05-18 06:45:46",
+  "total_stocks_processed": 0,
+  "statistics": {
+    "average_score": 0,
+    "bullish_stocks": 0,
+    "bearish_stocks": 0,
+    "perfect_alignment": 0,
+    "highest_score": 0,
+    "lowest_score": 0
+  },
+  "top_10_scores": [],
+  "all_stocks": []
+}
