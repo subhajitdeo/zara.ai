@@ -1,8 +1,8 @@
-name: Update EMA Scanner
+name: Full Stock Analysis
 
 on:
   schedule:
-    # 5:00 PM IST = 11:30 UTC (IST is UTC+5:30)
+    # Run at 9:30 PM IST (1 hour after market close)
     - cron: '30 11 * * *'
   workflow_dispatch:
 
@@ -10,9 +10,9 @@ permissions:
   contents: write
 
 jobs:
-  scan:
+  analyze:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -26,31 +26,29 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          if [ -f scanner/requirements.txt ]; then
-            pip install -r scanner/requirements.txt
-          else
-            echo "⚠️ scanner/requirements.txt not found, installing pandas"
-            pip install pandas
-          fi
+          pip install -r requirements.txt
+
+      - name: Run Main Calculator (Fetch Data & Calculate Indicators)
+        run: python calculate.py
 
       - name: Run EMA Scanner
         run: python scanner/scanner.py
 
-      - name: Commit Updated JSON
+      - name: Commit Results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Pull latest changes to avoid conflicts
+          # Pull latest changes
           git pull origin main --rebase || true
           
           # Add all changes
-          git add data/results.json
+          git add data/processed/ data/results.json
           
           # Commit if there are changes
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Auto-update EMA scanner data [skip ci]"
+            git commit -m "Auto-update stock analysis [skip ci]"
             git push origin main
           fi
