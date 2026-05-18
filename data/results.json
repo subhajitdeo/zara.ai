@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-18 06:49:32",
+  "last_updated": "2026-05-18 06:54:38",
   "total_stocks_processed": 0,
   "statistics": {
     "average_score": 0,
@@ -7,7 +7,7 @@
     "bearish_stocks": 0,
     "perfect_alignment": 0,
     "highest_score": 0,
-    "lowest_score": 0
+    "highest_score_stock": "N/A"
   },
   "top_10_scores": [],
   "all_stocks": []
